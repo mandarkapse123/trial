@@ -1,91 +1,76 @@
-Absolutely! Here’s a **refined, modernized version** of your Fitness Tracker.  
-**Key improvements:**
-- **Modern Tailwind 3+ classes** (with dark mode support).
-- **Cleaner, more accessible layout** (responsive, mobile-friendly, better spacing).
-- **Improved tab switching** (active tab highlight).
-- **Better form controls** (labels, spacing, focus states).
-- **Chart.js 4.x** (latest version).
-- **General code cleanup** (removed accidental Python code, improved comments, fixed week selection logic).
-
----
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPL Workout Tracker</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.3/dist/tailwind.min.css" rel="stylesheet">
+    <title>Fitness Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .chart-container { width: 100%; max-width: 700px; margin: 2rem auto; }
+        .toast { position: fixed; top: 2rem; right: 2rem; background: #10b981; color: white; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .toast.show { opacity: 1; pointer-events: auto; }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
-    <div class="container mx-auto max-w-3xl px-4 py-8">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">PPL Workout Tracker</h1>
-            <p class="text-gray-600 dark:text-gray-300 mt-2">Track your 5-day Push-Pull-Legs routine</p>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- Sticky Header -->
+        <header class="sticky top-0 z-40 bg-white shadow-md rounded-b-lg mb-8 py-6 px-4 flex flex-col items-center">
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight mb-2">PPL Workout Tracker</h1>
+            <p class="text-gray-500 text-lg">Track your 5-day Push-Pull-Legs routine</p>
         </header>
 
         <!-- Tabs -->
-        <div class="flex justify-center gap-4 mb-8">
-            <button id="tab-daily" class="tab-btn px-5 py-2 rounded-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-400 bg-blue-600 text-white shadow" data-tab="daily">
-                Daily Workout
-            </button>
-            <button id="tab-progress" class="tab-btn px-5 py-2 rounded-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow" data-tab="progress">
-                Progress
-            </button>
+        <div class="flex justify-center space-x-4 mb-8">
+            <button id="tab-daily" class="tab-button px-6 py-2 rounded-full font-semibold transition-all duration-200 focus:outline-none" onclick="openTab('daily')">Daily Workout</button>
+            <button id="tab-progress" class="tab-button px-6 py-2 rounded-full font-semibold transition-all duration-200 focus:outline-none" onclick="openTab('progress')">Progress</button>
         </div>
 
         <!-- Daily Workout Tab -->
-        <section id="daily" class="tab-content active">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="day-title">Today's Workout</h2>
-                <select id="week-select" class="p-2 border rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100">
+        <div id="daily" class="tab active">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                <h2 class="text-2xl font-bold mb-2 md:mb-0" id="day-title">Today's Workout</h2>
+                <select id="week-select" class="mb-2 md:mb-0 p-2 border rounded focus:ring-2 focus:ring-blue-400">
                     <option value="0">Current Week</option>
                     <option value="1">Week -1</option>
                     <option value="2">Week -2</option>
                 </select>
             </div>
-            <div id="exercise-list" class="space-y-6"></div>
+            <div id="exercise-list" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
             <div class="flex justify-end mt-6">
-                <button class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition" onclick="saveWorkout()">
-                    Save Workout
-                </button>
+                <button class="px-6 py-2 bg-green-500 text-white rounded-full font-semibold shadow hover:bg-green-600 transition-all duration-200" onclick="saveWorkout()">Save Workout</button>
             </div>
-        </section>
+        </div>
 
         <!-- Progress Tab -->
-        <section id="progress" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">Progress Charts</h2>
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
-                <label for="chart-muscle" class="font-semibold text-gray-700 dark:text-gray-200">Muscle Group:</label>
-                <select id="chart-muscle" class="p-2 border rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100">
-                    <option value="all">All Muscle Groups</option>
-                    <option value="quads">Quads</option>
-                    <option value="hamstrings">Hamstrings</option>
-                    <option value="glutes">Glutes</option>
-                    <option value="calves">Calves</option>
-                    <option value="chest">Chest</option>
-                    <option value="shoulders">Shoulders</option>
-                    <option value="triceps">Triceps</option>
-                    <option value="lats">Lats</option>
-                    <option value="midback">Mid-Back/Traps</option>
-                    <option value="biceps">Biceps</option>
-                </select>
+        <div id="progress" class="tab">
+            <h2 class="text-2xl font-bold mb-4">Progress Charts</h2>
+            <select id="chart-muscle" class="mb-4 p-2 border rounded focus:ring-2 focus:ring-blue-400">
+                <option value="all">All Muscle Groups</option>
+                <option value="quads">Quads</option>
+                <option value="hamstrings">Hamstrings</option>
+                <option value="glutes">Glutes</option>
+                <option value="calves">Calves</option>
+                <option value="chest">Chest</option>
+                <option value="shoulders">Shoulders</option>
+                <option value="triceps">Triceps</option>
+                <option value="lats">Lats</option>
+                <option value="midback">Mid-Back/Traps</option>
+                <option value="biceps">Biceps</option>
+            </select>
+            <div class="chart-container bg-white rounded-lg shadow p-6">
+                <canvas id="progress-chart"></canvas>
             </div>
-            <div class="w-full max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <canvas id="progress-chart" height="300"></canvas>
-            </div>
-        </section>
+        </div>
     </div>
-
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Workout saved!</div>
     <script>
         // --- Workout schedule ---
         const schedule = {
@@ -144,75 +129,78 @@ Absolutely! Here’s a **refined, modernized version** of your Fitness Tracker.
         let chartInstance = null;
 
         // --- Tab switching ---
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.classList.remove('bg-blue-600', 'text-white');
-                    b.classList.add('bg-gray-200', 'dark:bg-gray-800', 'text-gray-800', 'dark:text-gray-100');
-                });
-                this.classList.add('bg-blue-600', 'text-white');
-                this.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'text-gray-800', 'dark:text-gray-100');
-                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-                document.getElementById(this.dataset.tab).classList.add('active');
-                if (this.dataset.tab === 'daily') displayDailyWorkout();
-                else displayProgressChart();
-            });
-        });
-
-        // --- Week select change ---
-        document.getElementById('week-select').addEventListener('change', displayDailyWorkout);
+        function openTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`#${tabName}`).classList.add('active');
+            document.getElementById('tab-daily').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+            document.getElementById('tab-progress').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+            if (tabName === 'daily') {
+                document.getElementById('tab-daily').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+                displayDailyWorkout();
+            } else {
+                document.getElementById('tab-progress').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+                displayProgressChart();
+            }
+        }
 
         // --- Display daily workout ---
         function displayDailyWorkout() {
             const today = new Date();
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[today.getDay()];
             const weekOffset = parseInt(document.getElementById('week-select').value);
             const date = new Date(today.getTime() - weekOffset * 7 * 24 * 60 * 60 * 1000);
-            const dayName = days[date.getDay()];
             const dateString = date.toISOString().split('T')[0];
             document.getElementById('day-title').textContent = `${dayName}'s Workout (${dateString})`;
 
             const exercises = schedule[dayName] || [];
             const exerciseList = document.getElementById('exercise-list');
-            exerciseList.innerHTML = exercises.length ? '' : '<p class="text-gray-600 dark:text-gray-300">Rest Day</p>';
+            exerciseList.innerHTML = '';
+
+            if (!exercises.length) {
+                exerciseList.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow text-gray-500 text-xl font-semibold">Rest Day! Enjoy your recovery.</div>';
+                return;
+            }
 
             exercises.forEach(ex => {
                 const savedData = workoutData[dateString]?.[ex.name] || { sets: 0, weight: '', reps: '' };
                 const div = document.createElement('div');
-                div.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex flex-col gap-2';
+                div.className = 'bg-white p-6 rounded-lg shadow flex flex-col gap-2';
                 div.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">${ex.name} <span class="text-sm text-gray-500">(${ex.muscle})</span></h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">${ex.name} <span class="text-xs text-gray-400 font-normal">(${ex.muscle})</span></h3>
+                    <p class="text-gray-500 mb-2">Target Sets: <span class="font-semibold">${ex.sets}</span></p>
                     <div class="flex flex-wrap gap-4 items-center">
-                        <div>
-                            <label class="block text-gray-700 dark:text-gray-200 text-sm">Target Sets</label>
-                            <span class="font-bold">${ex.sets}</span>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 dark:text-gray-200 text-sm" for="sets-${ex.name}">Sets Completed</label>
-                            <input id="sets-${ex.name}" type="number" min="0" max="${ex.sets}" value="${savedData.sets || 0}" class="sets-input border p-2 rounded w-20 bg-gray-50 dark:bg-gray-700" data-exercise="${ex.name}">
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 dark:text-gray-200 text-sm" for="weight-${ex.name}">Weight (kg)</label>
-                            <input id="weight-${ex.name}" type="number" min="0" value="${savedData.weight || ''}" class="weight-input border p-2 rounded w-20 bg-gray-50 dark:bg-gray-700" data-exercise="${ex.name}">
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 dark:text-gray-200 text-sm" for="reps-${ex.name}">Reps</label>
-                            <input id="reps-${ex.name}" type="number" min="0" max="20" value="${savedData.reps || ''}" class="reps-input border p-2 rounded w-20 bg-gray-50 dark:bg-gray-700" data-exercise="${ex.name}">
-                        </div>
+                        <label class="text-gray-600">Sets Completed:
+                            <input type="number" min="0" max="${ex.sets}" value="${savedData.sets || 0}" class="sets-input border p-2 rounded w-20 focus:ring-2 focus:ring-blue-400 mt-1" data-exercise="${ex.name}">
+                        </label>
+                        <label class="text-gray-600">Weight (kg):
+                            <input type="number" min="0" value="${savedData.weight || ''}" class="weight-input border p-2 rounded w-20 focus:ring-2 focus:ring-blue-400 mt-1" data-exercise="${ex.name}">
+                        </label>
+                        <label class="text-gray-600">Reps:
+                            <input type="number" min="0" max="10" value="${savedData.reps || ''}" class="reps-input border p-2 rounded w-20 focus:ring-2 focus:ring-blue-400 mt-1" data-exercise="${ex.name}">
+                        </label>
                     </div>
                 `;
                 exerciseList.appendChild(div);
             });
         }
 
-        // --- Save workout ---
+        // --- Toast notification ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // --- Save workout to localStorage (and Excel) ---
         function saveWorkout() {
             const today = new Date();
             const weekOffset = parseInt(document.getElementById('week-select').value);
             const date = new Date(today.getTime() - weekOffset * 7 * 24 * 60 * 60 * 1000);
             const dateString = date.toISOString().split('T')[0];
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const dayName = days[date.getDay()];
+            const dayName = days[today.getDay()];
             if (!workoutData[dateString]) workoutData[dateString] = {};
 
             document.querySelectorAll('.sets-input').forEach(input => {
@@ -225,89 +213,57 @@ Absolutely! Here’s a **refined, modernized version** of your Fitness Tracker.
 
             localStorage.setItem('workoutData', JSON.stringify(workoutData));
             saveToExcel(dateString, dayName);
-            alert('Workout saved!');
+            showToast('Workout saved!');
         }
 
-        // --- Save to Excel (download) ---
-        function saveToExcel(dateString, dayName) {
+        // --- Simulate Excel saving (Office API integration placeholder) ---
+        async function saveToExcel(dateString, dayName) {
             const data = [];
             (schedule[dayName] || []).forEach(ex => {
                 const savedData = workoutData[dateString]?.[ex.name] || { sets: 0, weight: '', reps: '' };
-                data.push({
-                    Date: dateString,
-                    Day: dayName,
-                    Exercise: ex.name,
-                    Muscle: ex.muscle,
-                    Sets: savedData.sets,
-                    Weight: savedData.weight,
-                    Reps: savedData.reps
-                });
+                data.push({ Date: dateString, Day: dayName, Exercise: ex.name, Muscle: ex.muscle, Sets: savedData.sets, Weight: savedData.weight, Reps: savedData.reps });
             });
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Raw Data');
-            XLSX.writeFile(wb, 'WorkoutData.xlsx');
+            XLSX.write_file(wb, 'WorkoutData.xlsx');
         }
 
-        // --- Progress Chart ---
+        // --- Display progress chart ---
         function displayProgressChart() {
             const muscle = document.getElementById('chart-muscle').value;
-            // Get last 3 weeks (including current)
             const weeks = Array.from({ length: 3 }, (_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() - i * 7);
-                return d.toISOString().split('T')[0];
+                const date = new Date();
+                date.setDate(date.getDate() - i * 7);
+                return date.toISOString().split('T')[0];
             }).reverse();
 
-            // Define muscle groups for "all"
-            const muscleGroups = [
-                { key: 'quads', label: 'Quads', color: 'rgba(75,192,192,0.7)' },
-                { key: 'hamstrings', label: 'Hamstrings', color: 'rgba(255,99,132,0.7)' },
-                { key: 'glutes', label: 'Glutes', color: 'rgba(54,162,235,0.7)' },
-                { key: 'calves', label: 'Calves', color: 'rgba(255,206,86,0.7)' },
-                { key: 'chest', label: 'Chest', color: 'rgba(153,102,255,0.7)' },
-                { key: 'shoulders', label: 'Shoulders', color: 'rgba(255,159,64,0.7)' },
-                { key: 'triceps', label: 'Triceps', color: 'rgba(255,99,132,0.5)' },
-                { key: 'lats', label: 'Lats', color: 'rgba(75,192,192,0.5)' },
-                { key: 'midback', label: 'Mid-Back/Traps', color: 'rgba(54,162,235,0.5)' },
-                { key: 'biceps', label: 'Biceps', color: 'rgba(255,206,86,0.5)' }
-            ];
+            const datasets = muscle === 'all' ? [
+                { label: 'Quads', data: [], backgroundColor: 'rgba(75, 192, 192, 0.7)' },
+                { label: 'Hamstrings', data: [], backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+                { label: 'Glutes', data: [], backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: 'Calves', data: [], backgroundColor: 'rgba(255, 206, 86, 0.7)' },
+                { label: 'Chest', data: [], backgroundColor: 'rgba(153, 102, 255, 0.7)' },
+                { label: 'Shoulders', data: [], backgroundColor: 'rgba(255, 159, 64, 0.7)' },
+                { label: 'Triceps', data: [], backgroundColor: 'rgba(255, 99, 132, 0.4)' },
+                { label: 'Lats', data: [], backgroundColor: 'rgba(75, 192, 192, 0.4)' },
+                { label: 'Mid-Back/Traps', data: [], backgroundColor: 'rgba(54, 162, 235, 0.4)' },
+                { label: 'Biceps', data: [], backgroundColor: 'rgba(255, 206, 86, 0.4)' }
+            ] : [{ label: muscle, data: [], backgroundColor: 'rgba(75, 192, 192, 0.7)' }];
 
-            let datasets = [];
-            if (muscle === 'all') {
-                datasets = muscleGroups.map(group => ({
-                    label: group.label,
-                    data: weeks.map(week => {
-                        let total = 0;
-                        const weekData = workoutData[week] || {};
-                        Object.keys(weekData).forEach(exName => {
-                            const ex = Object.values(schedule).flat().find(e => e.name === exName);
-                            if (ex && ex.muscle.toLowerCase().includes(group.key)) {
-                                total += weekData[exName].sets || 0;
-                            }
-                        });
-                        return total;
-                    }),
-                    backgroundColor: group.color
-                }));
-            } else {
-                const group = muscleGroups.find(g => g.key === muscle);
-                datasets = [{
-                    label: group ? group.label : muscle,
-                    data: weeks.map(week => {
-                        let total = 0;
-                        const weekData = workoutData[week] || {};
-                        Object.keys(weekData).forEach(exName => {
-                            const ex = Object.values(schedule).flat().find(e => e.name === exName);
-                            if (ex && ex.muscle.toLowerCase().includes(muscle)) {
-                                total += weekData[exName].sets || 0;
-                            }
-                        });
-                        return total;
-                    }),
-                    backgroundColor: group ? group.color : 'rgba(75,192,192,0.7)'
-                }];
-            }
+            weeks.forEach(week => {
+                const weekData = workoutData[week] || {};
+                datasets.forEach(dataset => {
+                    let totalSets = 0;
+                    Object.keys(weekData).forEach(ex => {
+                        const exercise = Object.values(schedule).flat().find(e => e.name === ex);
+                        if (exercise && (muscle === 'all' || exercise.muscle.toLowerCase().includes(dataset.label.toLowerCase()))) {
+                            totalSets += weekData[ex].sets;
+                        }
+                    });
+                    dataset.data.push(totalSets);
+                });
+            });
 
             if (chartInstance) chartInstance.destroy();
             chartInstance = new Chart(document.getElementById('progress-chart'), {
@@ -318,38 +274,20 @@ Absolutely! Here’s a **refined, modernized version** of your Fitness Tracker.
                 },
                 options: {
                     responsive: true,
-                    plugins: {
-                        legend: { display: muscle === 'all' },
-                        title: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Sets Completed' }
-                        }
-                    }
+                    maintainAspectRatio: false,
+                    aspectRatio: 2,
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Sets Completed' } } },
+                    plugins: { legend: { display: muscle === 'all' } }
                 }
             });
         }
 
         // --- Event listeners ---
-        document.getElementById('chart-muscle').addEventListener('change', displayProgressChart);
-
-        // --- Initial load ---
         displayDailyWorkout();
+        document.getElementById('chart-muscle').addEventListener('change', displayProgressChart);
+        document.getElementById('week-select').addEventListener('change', displayDailyWorkout);
+        // Set initial tab style
+        document.getElementById('tab-daily').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
     </script>
 </body>
-</html>
-```
-
----
-
-**What’s improved?**
-- **Modern Tailwind**: Responsive, dark mode, better spacing, rounded corners, focus states.
-- **Tab highlight**: Active tab is blue, inactive is gray.
-- **Cleaner forms**: Inputs are grouped, labeled, and accessible.
-- **Chart.js 4.x**: Latest version, better color palette.
-- **No accidental Python code**: Only clean HTML/JS.
-- **Mobile-friendly**: Layout adapts to small screens.
-
-Let me know if you want further customization or features!
+</html> 
