@@ -9,7 +9,6 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            background-image: url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -19,7 +18,7 @@
             align-items: center;
         }
         .container {
-            max-width: 600px;
+            max-width: 700px;
             background: rgba(255, 255, 255, 0.9);
             padding: 2rem;
             border-radius: 1rem;
@@ -37,18 +36,87 @@
             -moz-appearance: none;
             background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M7 7l3-3 3 3m0 6l-3 3-3-3"/></svg>') no-repeat right 0.5rem center/1rem;
         }
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
+        .top-right-buttons {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body>
+    <div class="top-right-buttons">
+        <input type="file" id="import-data" accept=".json" class="hidden">
+        <button class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm" onclick="document.getElementById('import-data').click()">Upload JSON</button>
+        <button class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm" onclick="downloadData()">Download JSON</button>
+    </div>
     <div class="container">
         <h1 class="text-2xl font-bold text-gray-800 text-center mb-6">PPL Workout Tracker</h1>
-        <h2 class="text-xl font-semibold text-gray-700 text-center mb-4" id="day-title">Today's Workout</h2>
-        <div id="exercise-list" class="space-y-4"></div>
-        <button class="mt-6 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="saveWorkout()">Save Workout</button>
+        <!-- Tabs -->
+        <div class="flex justify-center space-x-4 mb-6">
+            <button class="tab-button px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="openTab('tracker')">Workout Tracker</button>
+            <button class="tab-button px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="openTab('schedule')">Workout Schedule</button>
+            <button class="tab-button px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="openTab('progress')">Progress</button>
+        </div>
+
+        <!-- Workout Tracker Tab -->
+        <div id="tracker" class="tab active">
+            <h2 class="text-xl font-semibold text-gray-700 text-center mb-4" id="day-title">Today's Workout</h2>
+            <div id="exercise-list" class="space-y-4"></div>
+            <div class="mt-4">
+                <h3 class="text-lg font-semibold mb-2">Add Custom Exercise</h3>
+                <input id="custom-exercise" type="text" placeholder="Exercise Name" class="border p-2 rounded w-1/3">
+                <input id="custom-muscle" type="text" placeholder="Muscle Group" class="border p-2 rounded w-1/3 ml-2">
+                <button class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 ml-2" onclick="addCustomExercise()">Add</button>
+            </div>
+            <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="saveWorkout()">Save Workout</button>
+        </div>
+
+        <!-- Workout Schedule Tab -->
+        <div id="schedule" class="tab">
+            <h2 class="text-xl font-semibold text-gray-700 text-center mb-4">Weekly Workout Schedule</h2>
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Day</th>
+                        <th class="border p-2">Exercise</th>
+                        <th class="border p-2">Sets</th>
+                        <th class="border p-2">Muscle Group</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-table"></tbody>
+            </table>
+        </div>
+
+        <!-- Progress Tab -->
+        <div id="progress" class="tab">
+            <h2 class="text-xl font-semibold text-gray-700 text-center mb-4">Workout Progress</h2>
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Date</th>
+                        <th class="border p-2">Day</th>
+                        <th class="border p-2">Exercise</th>
+                        <th class="border p-2">Muscle Group</th>
+                        <th class="border p-2">Sets Completed</th>
+                        <th class="border p-2">Reps</th>
+                        <th class="border p-2">Completed</th>
+                    </tr>
+                </thead>
+                <tbody id="progress-table"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // Workout schedule (from revised routine)
+        // Workout schedule
         const schedule = {
             "Monday": [
                 { name: "Leg Press", sets: 3, muscle: "Quads, Glutes" },
@@ -100,18 +168,48 @@
             ]
         };
 
+        // Background images based on workout type
+        const backgroundImages = {
+            "Legs": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80",
+            "Push": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80",
+            "Pull": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80",
+            "Upper Body": "https://images.unsplash.com/photo-1516901121982-8ba7a997f2f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80",
+            "Rest": "https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80"
+        };
+
         // Initialize workout data
         let workoutData = JSON.parse(localStorage.getItem('workoutData')) || {};
+        let customExercises = JSON.parse(localStorage.getItem('customExercises')) || {};
+
+        // Tab switching
+        function openTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`#${tabName}`).classList.add('active');
+            if (tabName === 'tracker') displayDailyWorkout();
+            else if (tabName === 'schedule') displaySchedule();
+            else if (tabName === 'progress') displayProgress();
+        }
+
+        // Set background image based on day
+        function setBackgroundImage(dayName) {
+            let workoutType = 'Rest';
+            if (dayName === 'Monday' || dayName === 'Friday') workoutType = 'Legs';
+            else if (dayName === 'Tuesday') workoutType = 'Push';
+            else if (dayName === 'Thursday') workoutType = 'Pull';
+            else if (dayName === 'Sunday') workoutType = 'Upper Body';
+            document.body.style.backgroundImage = `url('${backgroundImages[workoutType]}')`;
+        }
 
         // Display daily workout
         function displayDailyWorkout() {
-            const today = new Date('2025-07-17T15:57:00+05:30'); // Fixed date for testing
+            const today = new Date('2025-07-17T18:41:00+05:30'); // Fixed date for testing (Thursday, July 17, 2025)
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[today.getDay()];
             const dateString = today.toISOString().split('T')[0];
             document.getElementById('day-title').textContent = `${dayName}'s Workout (${dateString})`;
+            setBackgroundImage(dayName);
 
-            const exercises = schedule[dayName] || [];
+            const exercises = [...(schedule[dayName] || []), ...(customExercises[dayName] || [])];
             const exerciseList = document.getElementById('exercise-list');
             exerciseList.innerHTML = exercises.length ? '' : '<p class="text-gray-600 text-center">Rest Day</p>';
 
@@ -128,14 +226,45 @@
                     <select class="reps-dropdown border p-2 rounded w-24" data-exercise="${ex.name}">
                         ${Array.from({ length: 11 }, (_, i) => `<option value="${i}" ${savedData.reps === i ? 'selected' : ''}>${i} Reps</option>`).join('')}
                     </select>
+                    <button class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600" onclick="deleteExercise('${ex.name}', '${dayName}')">Delete</button>
                 `;
                 exerciseList.appendChild(div);
             });
         }
 
+        // Add custom exercise
+        function addCustomExercise() {
+            const today = new Date('2025-07-17T18:41:00+05:30');
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[today.getDay()];
+            const exerciseName = document.getElementById('custom-exercise').value.trim();
+            const muscleGroup = document.getElementById('custom-muscle').value.trim();
+            if (!exerciseName || !muscleGroup) {
+                alert('Please enter exercise name and muscle group');
+                return;
+            }
+            if (!customExercises[dayName]) customExercises[dayName] = [];
+            customExercises[dayName].push({ name: exerciseName, sets: 2, muscle: muscleGroup });
+            localStorage.setItem('customExercises', JSON.stringify(customExercises));
+            document.getElementById('custom-exercise').value = '';
+            document.getElementById('custom-muscle').value = '';
+            displayDailyWorkout();
+        }
+
+        // Delete exercise
+        function deleteExercise(exerciseName, dayName) {
+            if (schedule[dayName]?.some(ex => ex.name === exerciseName)) {
+                alert('Cannot delete default exercises');
+                return;
+            }
+            customExercises[dayName] = customExercises[dayName].filter(ex => ex.name !== exerciseName);
+            localStorage.setItem('customExercises', JSON.stringify(customExercises));
+            displayDailyWorkout();
+        }
+
         // Save workout data
         function saveWorkout() {
-            const today = new Date('2025-07-17T15:57:00+05:30');
+            const today = new Date('2025-07-17T18:41:00+05:30');
             const dateString = today.toISOString().split('T')[0];
             if (!workoutData[dateString]) workoutData[dateString] = {};
 
@@ -149,6 +278,97 @@
 
             localStorage.setItem('workoutData', JSON.stringify(workoutData));
             alert('Workout saved!');
+        }
+
+        // Download JSON data
+        function downloadData() {
+            const data = JSON.stringify({ workoutData, customExercises });
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `workout-data-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Import JSON data
+        document.getElementById('import-data').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return alert('Please select a JSON file');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    workoutData = data.workoutData || {};
+                    customExercises = data.customExercises || {};
+                    localStorage.setItem('workoutData', JSON.stringify(workoutData));
+                    localStorage.setItem('customExercises', JSON.stringify(customExercises));
+                    displayDailyWorkout();
+                    displayProgress();
+                    alert('Data imported successfully!');
+                } catch (err) {
+                    alert('Error importing JSON file');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset file input
+        });
+
+        // Display workout schedule
+        function displaySchedule() {
+            const scheduleTable = document.getElementById('schedule-table');
+            scheduleTable.innerHTML = '';
+            Object.keys(schedule).forEach(day => {
+                schedule[day].forEach(ex => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${day}</td>
+                        <td class="border p-2">${ex.name}</td>
+                        <td class="border p-2">${ex.sets}</td>
+                        <td class="border p-2">${ex.muscle}</td>
+                    `;
+                    scheduleTable.appendChild(row);
+                });
+                if (customExercises[day]) {
+                    customExercises[day].forEach(ex => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="border p-2">${day}</td>
+                            <td class="border p-2">${ex.name} (Custom)</td>
+                            <td class="border p-2">${ex.sets}</td>
+                            <td class="border p-2">${ex.muscle}</td>
+                        `;
+                        scheduleTable.appendChild(row);
+                    });
+                }
+            });
+        }
+
+        // Display progress
+        function displayProgress() {
+            const progressTable = document.getElementById('progress-table');
+            progressTable.innerHTML = '';
+            Object.keys(workoutData).sort().forEach(date => {
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayName = days[new Date(date).getDay()];
+                Object.keys(workoutData[date]).forEach(exercise => {
+                    const data = workoutData[date][exercise];
+                    const muscle = [...Object.values(schedule).flat(), ...Object.values(customExercises).flat()]
+                        .find(ex => ex.name === exercise)?.muscle || 'Unknown';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${date}</td>
+                        <td class="border p-2">${dayName}</td>
+                        <td class="border p-2">${exercise}</td>
+                        <td class="border p-2">${muscle}</td>
+                        <td class="border p-2">${data.sets}</td>
+                        <td class="border p-2">${data.reps}</td>
+                        <td class="border p-2">${data.completed ? 'Yes' : 'No'}</td>
+                    `;
+                    progressTable.appendChild(row);
+                });
+            });
         }
 
         // Initialize
